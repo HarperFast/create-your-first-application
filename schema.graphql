@@ -1,5 +1,5 @@
 # Table Schemas
-type Dog @table {
+type Dog @table @export {
 	id: ID @primaryKey
 	name: String
 	breed: String
