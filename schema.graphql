@@ -1,1 +1,7 @@
 # Table Schemas
+type Dog @table {
+	id: ID @primaryKey
+	name: String
+	breed: String
+	age: Int
+}

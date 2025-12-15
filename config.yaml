@@ -1,1 +1,3 @@
 # Harper application configuration
+graphqlSchema:
+  files: 'schema.graphql'
