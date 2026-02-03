@@ -13,7 +13,11 @@ function calculateHumanAge(dogAge) {
 export class DogWithHumanAge extends tables.Dog {
 	static loadAsInstance = false;
 	async get(target) {
+		logger.info('Hello from inside DogWithHumanAge!');
+
 		const dogRecord = await super.get(target);
+
+		console.log('dogRecord', dogRecord);
 
 		return {
 			...dogRecord,
