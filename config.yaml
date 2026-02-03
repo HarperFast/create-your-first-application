@@ -1,4 +1,6 @@
 # Harper application configuration
 graphqlSchema:
   files: 'schema.graphql'
+jsResource:
+  files: 'resources.js'
 rest: true
