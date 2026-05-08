@@ -1,0 +1,23 @@
+{
+  "name": "create-your-first-application",
+  "version": "1.0.0",
+  "description": "This repository is intended for use alongside the Harper Learn [\"Getting Started > Create Your First Application\"](https://docs.harperdb.io/learn/getting-started/create-your-first-application) guide.",
+  "homepage": "https://github.com/HarperFast/create-your-first-application#readme",
+  "bugs": {
+    "url": "https://github.com/HarperFast/create-your-first-application/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HarperFast/create-your-first-application.git"
+  },
+  "license": "Apache-2.0",
+  "author": "HarperDB Inc.",
+  "type": "module",
+  "main": "resources.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "harper": "^5.0.11"
+  }
+}
