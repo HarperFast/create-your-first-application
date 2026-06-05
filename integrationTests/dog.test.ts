@@ -6,11 +6,18 @@
 import { suite, test, before, after } from 'node:test';
 import { strictEqual, ok } from 'node:assert/strict';
 import { setupHarperWithFixture, teardownHarper, type ContextWithHarper } from '@harperfast/integration-testing';
+import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtureDir = resolve(__dirname, '..');
+
+// harper's `exports` map only exposes ".", so the harness's default
+// `require.resolve('harper/dist/bin/harper.js')` throws ERR_PACKAGE_PATH_NOT_EXPORTED.
+// Resolve the CLI from the exported package root and pass it explicitly.
+const require = createRequire(import.meta.url);
+const harperBinPath = resolve(dirname(require.resolve('harper')), 'bin/harper.js');
 
 function basicAuth(username: string, password: string): string {
   return 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
@@ -18,7 +25,7 @@ function basicAuth(username: string, password: string): string {
 
 suite('Dog API and DogWithHumanAge', (ctx: ContextWithHarper) => {
   before(async () => {
-    await setupHarperWithFixture(ctx, fixtureDir);
+    await setupHarperWithFixture(ctx, fixtureDir, { harperBinPath });
   });
 
   after(async () => {
