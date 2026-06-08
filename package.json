@@ -11,13 +11,19 @@
     "url": "git+https://github.com/HarperFast/create-your-first-application.git"
   },
   "license": "Apache-2.0",
-  "author": "HarperDB Inc.",
+  "author": "Harper",
   "type": "module",
   "main": "resources.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:integration": "harper-integration-test-run integrationTests/**/*.test.ts"
   },
   "dependencies": {
-    "harper": "^5.0.11"
+    "harper": "^5.0.28"
+  },
+  "devDependencies": {
+    "@harperfast/integration-testing": "^0.4.0",
+    "@types/node": "^25.9.2",
+    "typescript": "^6.0.3"
   }
 }
