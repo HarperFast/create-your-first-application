@@ -43,6 +43,15 @@ suite('Dog API and DogWithHumanAge', (ctx: ContextWithHarper) => {
     });
 
     ok(res.ok, `expected successful create, got HTTP ${res.status}`);
+
+    const getRes = await fetch(`${httpURL}/Dog/test-buddy`, {
+      headers: { Authorization: auth },
+    });
+    strictEqual(getRes.status, 200);
+    const body = await getRes.json() as { id: string; name: string; breed: string; age: number };
+    strictEqual(body.name, 'Buddy');
+    strictEqual(body.breed, 'Golden Retriever');
+    strictEqual(body.age, 3);
   });
 
   test('GET /Dog/:id returns the dog', async () => {
@@ -83,6 +92,7 @@ suite('Dog API and DogWithHumanAge', (ctx: ContextWithHarper) => {
     const getRes = await fetch(`${httpURL}/Dog/test-update`, {
       headers: { Authorization: auth },
     });
+    strictEqual(getRes.status, 200);
     const body = await getRes.json() as { name: string };
     strictEqual(body.name, 'After');
   });
@@ -91,11 +101,12 @@ suite('Dog API and DogWithHumanAge', (ctx: ContextWithHarper) => {
     const { admin, httpURL } = ctx.harper;
     const auth = basicAuth(admin.username, admin.password);
 
-    await fetch(`${httpURL}/Dog/test-delete`, {
+    const setupRes = await fetch(`${httpURL}/Dog/test-delete`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: auth },
       body: JSON.stringify({ id: 'test-delete', name: 'Delete Me', breed: 'Dachshund', age: 4 }),
     });
+    ok(setupRes.ok, 'setup PUT failed: HTTP ' + setupRes.status);
 
     const deleteRes = await fetch(`${httpURL}/Dog/test-delete`, {
       method: 'DELETE',
