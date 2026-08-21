@@ -1,0 +1,200 @@
+/**
+ * Verifies CRUD on the Dog REST API, the DogWithHumanAge custom resource,
+ * and that the logger integration (step 04) does not break GET behaviour.
+ *
+ * DogWithHumanAge adds a calculated humanAge field:
+ *   age 1 → 15, age 2 → 24, age 3+ → 24 + 5 * (age - 2)
+ *
+ * The logger.info() / console.log() calls added in step 04 are side-effects
+ * only; we verify they don't interfere with the returned response.
+ */
+import { suite, test, before, after } from 'node:test';
+import { strictEqual, ok } from 'node:assert/strict';
+import {
+  setupHarperWithFixture,
+  teardownHarper,
+  type ContextWithHarper,
+} from '@harperfast/integration-testing';
+import { createRequire } from 'node:module';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixtureDir = resolve(__dirname, '..');
+
+// harper's `exports` map only exposes ".", so the harness's default
+// `require.resolve('harper/dist/bin/harper.js')` throws ERR_PACKAGE_PATH_NOT_EXPORTED.
+// Resolve the CLI from the exported package root and pass it explicitly.
+const require = createRequire(import.meta.url);
+const harperBinPath = resolve(dirname(require.resolve('harper')), 'bin/harper.js');
+
+function basicAuth(username: string, password: string): string {
+  return 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+}
+
+suite('Dog API and DogWithHumanAge (with logger)', (ctx: ContextWithHarper) => {
+  before(async () => {
+    await setupHarperWithFixture(ctx, fixtureDir, { harperBinPath });
+  });
+
+  after(async () => {
+    await teardownHarper(ctx);
+  });
+
+  test('PUT /Dog/:id creates a dog', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    const res = await fetch(`${httpURL}/Dog/test-buddy`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-buddy', name: 'Buddy', breed: 'Golden Retriever', age: 3 }),
+    });
+
+    ok(res.ok, `expected successful create, got HTTP ${res.status}`);
+  });
+
+  test('GET /Dog/:id returns the dog', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-max`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-max', name: 'Max', breed: 'Labrador', age: 2 }),
+    });
+
+    const getRes = await fetch(`${httpURL}/Dog/test-max`, {
+      headers: { Authorization: auth },
+    });
+
+    strictEqual(getRes.status, 200);
+    const body = (await getRes.json()) as { id: string; name: string };
+    strictEqual(body.name, 'Max');
+  });
+
+  test('PUT /Dog/:id updates the dog name', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-update`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-update', name: 'Before', breed: 'Poodle', age: 1 }),
+    });
+
+    await fetch(`${httpURL}/Dog/test-update`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-update', name: 'After', breed: 'Poodle', age: 1 }),
+    });
+
+    const getRes = await fetch(`${httpURL}/Dog/test-update`, {
+      headers: { Authorization: auth },
+    });
+    const body = (await getRes.json()) as { name: string };
+    strictEqual(body.name, 'After');
+  });
+
+  test('DELETE /Dog/:id removes the dog', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-delete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-delete', name: 'Delete Me', breed: 'Dachshund', age: 4 }),
+    });
+
+    const deleteRes = await fetch(`${httpURL}/Dog/test-delete`, {
+      method: 'DELETE',
+      headers: { Authorization: auth },
+    });
+    ok(deleteRes.ok, `expected successful delete, got HTTP ${deleteRes.status}`);
+
+    const getRes = await fetch(`${httpURL}/Dog/test-delete`, {
+      headers: { Authorization: auth },
+    });
+    strictEqual(getRes.status, 404);
+  });
+
+  // DogWithHumanAge tests — logger.info() is called inside get(); these
+  // confirm the logging side-effect does not break response correctness.
+
+  test('GET /DogWithHumanAge/:id returns humanAge=15 for age=1 (logger.info fires)', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-age1`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-age1', name: 'Puppy', breed: 'Beagle', age: 1 }),
+    });
+
+    const res = await fetch(`${httpURL}/DogWithHumanAge/test-age1`, {
+      headers: { Authorization: auth },
+    });
+
+    strictEqual(res.status, 200);
+    const body = (await res.json()) as { humanAge: number };
+    strictEqual(body.humanAge, 15);
+  });
+
+  test('GET /DogWithHumanAge/:id returns humanAge=24 for age=2 (logger.info fires)', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-age2`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-age2', name: 'Teenager', breed: 'Boxer', age: 2 }),
+    });
+
+    const res = await fetch(`${httpURL}/DogWithHumanAge/test-age2`, {
+      headers: { Authorization: auth },
+    });
+
+    strictEqual(res.status, 200);
+    const body = (await res.json()) as { humanAge: number };
+    strictEqual(body.humanAge, 24);
+  });
+
+  test('GET /DogWithHumanAge/:id returns humanAge=29 for age=3 (logger.info fires)', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-age3`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-age3', name: 'Adult', breed: 'Collie', age: 3 }),
+    });
+
+    const res = await fetch(`${httpURL}/DogWithHumanAge/test-age3`, {
+      headers: { Authorization: auth },
+    });
+
+    strictEqual(res.status, 200);
+    const body = (await res.json()) as { humanAge: number };
+    strictEqual(body.humanAge, 29);
+  });
+
+  test('GET /DogWithHumanAge/:id returns humanAge=34 for age=4 (logger.info fires)', async () => {
+    const { admin, httpURL } = ctx.harper;
+    const auth = basicAuth(admin.username, admin.password);
+
+    await fetch(`${httpURL}/Dog/test-age4`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({ id: 'test-age4', name: 'Senior', breed: 'Pug', age: 4 }),
+    });
+
+    const res = await fetch(`${httpURL}/DogWithHumanAge/test-age4`, {
+      headers: { Authorization: auth },
+    });
+
+    strictEqual(res.status, 200);
+    const body = (await res.json()) as { humanAge: number };
+    // 24 + 5 * (4 - 2) = 34
+    strictEqual(body.humanAge, 34);
+  });
+});

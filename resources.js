@@ -1,3 +1,5 @@
+import { tables, logger } from 'harper';
+
 // Fun fact, the 7:1 ratio is a misconception
 // https://www.akc.org/expert-advice/health/how-to-calculate-dog-years-to-human-years/
 function calculateHumanAge(dogAge) {
@@ -11,7 +13,6 @@ function calculateHumanAge(dogAge) {
 }
 
 export class DogWithHumanAge extends tables.Dog {
-	static loadAsInstance = false;
 	async get(target) {
 		logger.info('Hello from inside DogWithHumanAge!');
 
